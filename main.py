@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import groupby
 import subprocess
 import os
 
@@ -21,11 +22,11 @@ def l2bin(filenames: list, out_dir: str, product: str, flags: str, spatial_res: 
     for filename in filenames:
         print("\n=============>L2BIN<=============")
         subprocess.run(["l2bin",
-                        str.join(["infile=", filename]),
-                        str.join(["ofile=", out_dir + "/" + os.path.basename(filename)[0:14],  ".bl2bin"]),
-                        str.join(["l3bprod=", product]),
-                        str.join(["resolve=", str(spatial_res)]),
-                        str.join(["flaguse=", flags])
+                        "".join(["infile=", filename]),
+                        "".join(["ofile=", out_dir + "/" + os.path.basename(filename)[0:14],  ".bl2bin"]),
+                        "".join(["l3bprod=", product]),
+                        "".join(["resolve=", str(spatial_res)]),
+                        "".join(["flaguse=", flags])
                         ])
 
 def l3bin(filenames: str, out_name: str, product: str, input_coords: list):
@@ -40,13 +41,34 @@ def l3bin(filenames: str, out_name: str, product: str, input_coords: list):
     """
     print("\n=============>L3BIN<=============")
     subprocess.run(["l3bin",
-                    str.join(["ifile=", filenames]),
-                    str.join(["ofile=", out_name]),
-                    str.join(["prod=", product]),
-                    str.join(["loneast=", str(input_coords[0])]),
-                    str.join(["lonwest=", str(input_coords[1])]),
-                    str.join(["latnorth=", str(input_coords[2])]),
-                    str.join(["latsouth=", str(input_coords[3])]),
+                    "".join(["ifile=", filenames]),
+                    "".join(["ofile=", out_name]),
+                    "".join(["prod=", product]),
+                    "".join(["loneast=", str(input_coords[0])]),
+                    "".join(["lonwest=", str(input_coords[1])]),
+                    "".join(["latnorth=", str(input_coords[2])]),
+                    "".join(["latsouth=", str(input_coords[3])]),
                     ])
+
+
+def process(filenames, product, flags, spatial_res, sensor, year, coords):
+
+    # make directories
+    temp = os.path.dirname(filenames[0])
+    l2bin_output = temp + '/l2bin'
+    l3bin_output = temp + '/l3bin'
+
+    daily_files = [list(i) for j, i in groupby(np.sort(filenames),lambda a: os.path.basename(a)[5:8])]
+
+    # average
+    for day_files in daily_files:
+        l2bin(day_files, l2bin_output, product, flags, spatial_res)
+
+        #TODO make list of files to give l3bin
+
+        l3bin_output_dir = l3bin_output + '/' + "daily"
+        l3bin_output_file = l3bin_output_dir + '/' + sensor + str(year) + os.path.basename(day_files[0])[5:8] + str(year) + day_files[0] + '.nc'
+        l3bin(ascii_files, l3bin_output_file, product, coords)
+
 
 l2bin(["test.nc"], "test2", "chlor_a", "", 4.6)
