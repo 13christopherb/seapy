@@ -102,7 +102,7 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
     l2bin_output = "/".join([temp + "l2bin"])
     l3bin_output = "l3bin"
 
-    daily_files = [list(i) for j, i in groupby(np.sort(filenames), lambda a: os.path.basename(a)[5:8])]
+    daily_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: os.path.basename(a)[5:8])]
 
     for day_files in daily_files:
         l2bin(day_files, l2bin_output, product, flags, spatial_res)
