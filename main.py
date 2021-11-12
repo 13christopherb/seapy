@@ -1,7 +1,9 @@
 import numpy as np
+import glob
 from itertools import groupby
 import subprocess
 import os
+
 
 def l2bin(filenames: list, out_dir: str, product: str, flags: str, spatial_res: float):
     """
@@ -28,6 +30,7 @@ def l2bin(filenames: list, out_dir: str, product: str, flags: str, spatial_res: 
                         "".join(["resolve=", str(spatial_res)]),
                         "".join(["flaguse=", flags])
                         ])
+
 
 def l3bin(filenames: str, out_name: str, product: str, spatial_bounds: list):
     """
@@ -84,6 +87,8 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
     """
     Takes raw level 2 files and converts them into spatially and temporally binned level 3 files
 
+    TODO: Remove interemdiate files
+
     Keyword arguments:
         filenames -- list of file paths for the raw level 2 files to be binned
         product -- data product to include in level 3 files (e.g. chlor_a)
@@ -94,8 +99,8 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
         spatial_bounds -- list of boundary latitudes and longitudes in order of east, west, north, south
     """
     temp = os.path.dirname(filenames[0])
-    l2bin_output = temp + '/l2bin'
-    l3bin_output = temp + '/l3bin'
+    l2bin_output = temp + "/l2bin"
+    l3bin_output = "l3bin"
 
     daily_files = [list(i) for j, i in groupby(np.sort(filenames), lambda a: os.path.basename(a)[5:8])]
 
@@ -106,18 +111,16 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
         l3bin_output_file = "".join([l3bin_output, "/daily/", sensor, "/", str(year),"/", os.path.basename(day_files[0])])
         l3bin(file_list, l3bin_output_file, product, spatial_bounds)
 
+    for file in glob.glob("".join([l2bin_output,"/*.bl2bin"])):
+        os.remove(file)
 
-flags = os.popen("more $OCSSWROOT/share/modis/l2bin_defaults.par | grep  flaguse").read().split('=')[1]
+    os.remove("".join([l2bin_output, "/l2b_list.txt"]))
 
-filenames = ["requested_files/A2015196113000.L2_LAC_OC.x.nc",
-             "requested_files/A2015196113500.L2_LAC_OC.x.nc",
-             "requested_files/A2015196131000.L2_LAC_OC.x.nc",
-             "requested_files/A2015196145000.L2_LAC_OC.x.nc",
-             "requested_files/A2015196192500.L2_LAC_OC.x.nc",
-             "requested_files/A2015196193000.L2_LAC_OC.x.nc",
-             "requested_files/A2015196193500.L2_LAC_OC.x.nc",
-             "requested_files/A2015196210000.L2_LAC_OC.x.nc",
-             "requested_files/A2015196210500.L2_LAC_OC.x.nc",
-             "requested_files/A2015196211000.L2_LAC_OC.x.nc",]
-process(filenames, "chlor_a", flags, 1, "modis", "2015", [-120, -180, 60, 20])
 
+def batch_process():
+    filenames = glob.glob("requested_files/*.nc")
+    flags = os.popen("more $OCSSWROOT/share/modis/l2bin_defaults.par | grep  flaguse").read().split('=')[1]
+    process(filenames, "chlor_a", flags, 1, "modis", 2008, [-120, -180, 60, 20])
+
+
+batch_process()
