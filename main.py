@@ -25,7 +25,7 @@ def l2bin(filenames: list, out_dir: str, product: str, flags: str, spatial_res: 
         print("\n=============>L2BIN<=============")
         subprocess.run(["l2bin",
                         "".join(["infile=", filename]),
-                        "".join(["ofile=", out_dir + "/" + os.path.basename(filename)[0:14],  ".bl2bin"]),
+                        "".join(["ofile=", out_dir, "/", os.path.basename(filename)[0:14],  ".bl2bin"]),
                         "".join(["l3bprod=", product]),
                         "".join(["resolve=", str(spatial_res)]),
                         "".join(["flaguse=", flags])
@@ -99,7 +99,7 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
         spatial_bounds -- list of boundary latitudes and longitudes in order of east, west, north, south
     """
     temp = os.path.dirname(filenames[0])
-    l2bin_output = "/".join([temp + "l2bin"])
+    l2bin_output = "/".join([temp, "l2bin"])
     l3bin_output = "l3bin"
 
     daily_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: os.path.basename(a)[5:8])]
