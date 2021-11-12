@@ -99,7 +99,7 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
         spatial_bounds -- list of boundary latitudes and longitudes in order of east, west, north, south
     """
     temp = os.path.dirname(filenames[0])
-    l2bin_output = temp + "/l2bin"
+    l2bin_output = "/".join([temp + "l2bin"])
     l3bin_output = "l3bin"
 
     daily_files = [list(i) for j, i in groupby(np.sort(filenames), lambda a: os.path.basename(a)[5:8])]
@@ -108,13 +108,13 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
         l2bin(day_files, l2bin_output, product, flags, spatial_res)
         file_list = write_file_list(l2bin_output, [os.path.basename(f)[:14] for f in day_files])
 
-        l3bin_output_file = "".join([l3bin_output, "/daily/", sensor, "/", str(year),"/", os.path.basename(day_files[0])])
+        l3bin_output_file = "/".join([l3bin_output, "daily", sensor, str(year), os.path.basename(day_files[0])])
         l3bin(file_list, l3bin_output_file, product, spatial_bounds)
 
-    for file in glob.glob("".join([l2bin_output,"/*.bl2bin"])):
+    for file in glob.glob("/".join([l2bin_output, "*.bl2bin"])):
         os.remove(file)
 
-    os.remove("".join([l2bin_output, "/l2b_list.txt"]))
+    os.remove("/".join([l2bin_output, "l2b_list.txt"]))
 
 
 def batch_process():
