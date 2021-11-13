@@ -2,6 +2,8 @@ import numpy as np
 import glob
 from itertools import groupby
 import subprocess
+from pathlib import Path
+import typing
 import os
 
 
@@ -59,7 +61,7 @@ def l3bin(filename: str, out_name: str, product: str, spatial_bounds: list):
                     ])
 
 
-def write_file_list(path: str, filenames: list) -> str:
+def write_file_list(path: typing.Union[str, Path], filenames: list) -> str:
     """
     Writes a list of all of the spatially binned level 3 files to a .txt file
 
@@ -71,12 +73,13 @@ def write_file_list(path: str, filenames: list) -> str:
         the full file name of the .txt file
     """
 
-    file_list = f"{path}/l2b_list.txt"
+    file_list = path / "l2b_list.txt"
 
-    f = open(file_list, 'w')
+    f = open(file_list, mode='w')
     for file in filenames:
-        if os.path.exists(f"{path}/{file}.bl2bin"):
-            f.write(f"{path}/{file}.bl2bin\n")
+        file_path = path / file / ".bl2bin"
+        if file_path.exists():
+            f.write(f"{file_path}\n")
 
     f.close()
 
@@ -98,29 +101,29 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
         year -- the year the files are from
         spatial_bounds -- list of boundary latitudes and longitudes in order of east, west, north, south
     """
-    temp = os.path.dirname(filenames[0])
-    l2bin_output = f"{temp}/l2bin"
-    l3bin_output = "l3bin"
+    l2bin_output = Path(filenames[0]).parent / "l2bin"
+    l3bin_output = Path("l3bin")
 
-    daily_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: os.path.basename(a)[5:8])]
+    daily_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: str(Path(a).parent)[5:8])]
 
     for day_files in daily_files:
         l2bin(day_files, l2bin_output, product, flags, spatial_res)
-        file_list = write_file_list(l2bin_output, [os.path.basename(f)[:14] for f in day_files])
+        file_list = write_file_list(l2bin_output, [str(Path(f).parent)[:14] for f in day_files])
 
-        l3bin_output_file = f"{l3bin_output}/daily/{sensor}/{year}/{os.path.basename(day_files[0])}"
+        l3bin_output_file = l3bin_output / "daily" / sensor / str(year) / Path(day_files[0]).parent
         l3bin(file_list, l3bin_output_file, product, spatial_bounds)
 
-    for file in glob.glob(f"{l2bin_output}/*.bl2bin"):
+    for file in l2bin_output.glob("*.bl2bin"):
         os.remove(file)
 
-    os.remove(f"{l2bin_output}/l2b_list.txt")
+    os.remove(l2bin_output / "l2b_list.txt")
 
 
 def batch_process():
-    filenames = glob.glob("requested_files/*.nc")
-    flags = os.popen("more $OCSSWROOT/share/modis/l2bin_defaults.par | grep  flaguse").read().split('=')[1]
-    process(filenames, "chlor_a", flags, 1, "modis", 2008, [-120, -180, 60, 20])
+    p = Path("requested_files/meris")
+    filenames = list(p.glob("*.nc"))
+    flags = os.popen("more $OCSSWROOT/share/meris/l2bin_defaults.par | grep  flaguse").read().split('=')[1]
+    process(filenames, "chlor_a", flags, 4, "meris", 2008, [-120, -180, 60, 20])
 
 
 batch_process()
