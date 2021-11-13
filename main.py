@@ -2,12 +2,11 @@ import numpy as np
 from itertools import groupby
 import subprocess
 from pathlib import Path
-import typing
-from collections.abc import Sequence
+from typing import Sequence, Union
 import os
 
 
-def l2bin(filenames: list, out_dir: typing.Union[str, Path], product: str, flags: str, spatial_res: float):
+def l2bin(filenames: Sequence[Path], out_dir: Union[str, Path], product: str, flags: str, spatial_res: float):
     """
     Runs the l2bin command on all the level 2 files provided and outputs
     level 3 files binned to the specified spatial resolution
@@ -27,7 +26,7 @@ def l2bin(filenames: list, out_dir: typing.Union[str, Path], product: str, flags
         print("\n=============>L2BIN<=============")
         subprocess.run(["l2bin",
                         f"infile={filename}",
-                        f"ofile={Path(out_dir) / Path(filename).name[0:14]}.bl2bin",
+                        f"ofile={out_dir / filename.name[0:14]}.bl2bin",
                         f"l3bprod={product}",
                         f"resolve={spatial_res}",
                         f"flaguse={flags}",
@@ -61,7 +60,7 @@ def l3bin(filename: str, out_name: str, product: str, spatial_bounds: list):
                     ])
 
 
-def write_file_list(path: typing.Union[str, Path], filenames: Sequence[Path]) -> str:
+def write_file_list(path: Union[str, Path], filenames: Sequence[Path]) -> str:
     """
     Writes a list of all of the spatially binned level 3 files to a .txt file
 
@@ -77,7 +76,7 @@ def write_file_list(path: typing.Union[str, Path], filenames: Sequence[Path]) ->
 
     f = open(file_list, mode='w')
     for file in filenames:
-        file_path = path / file.with_suffix(".bl2bin")
+        file_path = path / file
         if file_path.exists():
             f.write(f"{file_path}\n")
 
@@ -86,7 +85,7 @@ def write_file_list(path: typing.Union[str, Path], filenames: Sequence[Path]) ->
     return file_list
 
 
-def process(filenames: list, product: str, flags: str, spatial_res: int, sensor: str, year: int, spatial_bounds: list):
+def process(filenames: Sequence[Path], product: str, flags: str, spatial_res: int, sensor: str, year: int, spatial_bounds: list):
     """
     Takes raw level 2 files and converts them into spatially and temporally binned level 3 files
 
@@ -102,13 +101,13 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
     l2bin_output = Path(filenames[0]).parent / "l2bin"
     l3bin_output = Path("l3bin")
 
-    daily_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: str(Path(a).parent)[5:8])]
+    daily_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: Path(a).name[5:8])]
 
     for day_files in daily_files:
         l2bin(day_files, l2bin_output, product, flags, spatial_res)
-        file_list = write_file_list(l2bin_output, [Path(str(Path(f).child)[:14]) for f in day_files])
+        file_list = write_file_list(l2bin_output, [Path(f"{f.name[:14]}.bl2bin") for f in day_files])
 
-        l3bin_output_file = l3bin_output / "daily" / sensor / str(year) / Path(day_files[0]).parent
+        l3bin_output_file = (l3bin_output / "daily" / sensor / str(year) / day_files[0].name[:8]).with_suffix(".nc")
         l3bin(file_list, l3bin_output_file, product, spatial_bounds)
 
     for file in l2bin_output.glob("*.bl2bin"):
@@ -118,10 +117,10 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
 
 
 def batch_process():
-    p = Path("requested_files/meris")
+    p = Path("requested_files/modis")
     filenames = list(p.glob("*.nc"))
-    flags = os.popen("more $OCSSWROOT/share/meris/l2bin_defaults.par | grep  flaguse").read().split('=')[1]
-    process(filenames, "chlor_a", flags, 4, "meris", 2008, [-120, -180, 60, 20])
+    flags = os.popen("more $OCSSWROOT/share/modis/l2bin_defaults.par | grep  flaguse").read().split('=')[1]
+    process(filenames, "chlor_a", flags, 4, "modis", 2008, [-120, -180, 60, 20])
 
 
 batch_process()
