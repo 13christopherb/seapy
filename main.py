@@ -1,13 +1,13 @@
 import numpy as np
-import glob
 from itertools import groupby
 import subprocess
 from pathlib import Path
 import typing
+from collections.abc import Sequence
 import os
 
 
-def l2bin(filenames: list, out_dir: str, product: str, flags: str, spatial_res: float):
+def l2bin(filenames: list, out_dir: typing.Union[str, Path], product: str, flags: str, spatial_res: float):
     """
     Runs the l2bin command on all the level 2 files provided and outputs
     level 3 files binned to the specified spatial resolution
@@ -20,14 +20,14 @@ def l2bin(filenames: list, out_dir: str, product: str, flags: str, spatial_res: 
         spatial_res -- desired spatial resolution of l3bin files
     """
 
-    if not os.path.exists(out_dir):
+    if not out_dir.exists():
         os.makedirs(out_dir)
 
     for filename in filenames:
         print("\n=============>L2BIN<=============")
         subprocess.run(["l2bin",
                         f"infile={filename}",
-                        f"ofile={out_dir}/{os.path.basename(filename)[0:14]}.bl2bin",
+                        f"ofile={Path(out_dir) / Path(filename).name[0:14]}.bl2bin",
                         f"l3bprod={product}",
                         f"resolve={spatial_res}",
                         f"flaguse={flags}",
@@ -61,7 +61,7 @@ def l3bin(filename: str, out_name: str, product: str, spatial_bounds: list):
                     ])
 
 
-def write_file_list(path: typing.Union[str, Path], filenames: list) -> str:
+def write_file_list(path: typing.Union[str, Path], filenames: Sequence[Path]) -> str:
     """
     Writes a list of all of the spatially binned level 3 files to a .txt file
 
@@ -77,7 +77,7 @@ def write_file_list(path: typing.Union[str, Path], filenames: list) -> str:
 
     f = open(file_list, mode='w')
     for file in filenames:
-        file_path = path / file / ".bl2bin"
+        file_path = path / file.with_suffix(".bl2bin")
         if file_path.exists():
             f.write(f"{file_path}\n")
 
@@ -89,8 +89,6 @@ def write_file_list(path: typing.Union[str, Path], filenames: list) -> str:
 def process(filenames: list, product: str, flags: str, spatial_res: int, sensor: str, year: int, spatial_bounds: list):
     """
     Takes raw level 2 files and converts them into spatially and temporally binned level 3 files
-
-    TODO: Remove interemdiate files
 
     Keyword arguments:
         filenames -- list of file paths for the raw level 2 files to be binned
@@ -108,7 +106,7 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
 
     for day_files in daily_files:
         l2bin(day_files, l2bin_output, product, flags, spatial_res)
-        file_list = write_file_list(l2bin_output, [str(Path(f).child)[:14] for f in day_files])
+        file_list = write_file_list(l2bin_output, [Path(str(Path(f).child)[:14]) for f in day_files])
 
         l3bin_output_file = l3bin_output / "daily" / sensor / str(year) / Path(day_files[0]).parent
         l3bin(file_list, l3bin_output_file, product, spatial_bounds)
