@@ -108,7 +108,7 @@ def process(filenames: list, product: str, flags: str, spatial_res: int, sensor:
 
     for day_files in daily_files:
         l2bin(day_files, l2bin_output, product, flags, spatial_res)
-        file_list = write_file_list(l2bin_output, [str(Path(f).parent)[:14] for f in day_files])
+        file_list = write_file_list(l2bin_output, [str(Path(f).child)[:14] for f in day_files])
 
         l3bin_output_file = l3bin_output / "daily" / sensor / str(year) / Path(day_files[0]).parent
         l3bin(file_list, l3bin_output_file, product, spatial_bounds)
