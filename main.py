@@ -90,7 +90,9 @@ def process(filenames: Sequence[Path], product: str, flags: str, spatial_res: in
     Takes raw level 2 files and converts them into spatially and temporally binned level 3 files
 
     Keyword arguments:
-        filenames -- list of file paths for the raw level 2 files to be binned
+        filenames -- list of file paths for the raw level 2 files to be binned. Each file should have a name like
+            SYYYYDDDWWWWWW where the first letter indicates what sensor produced the file and the following 13 digits
+            identify the year, day of year (001-365 or 366), and the rest indicating which scan from that day
         product -- data product to include in level 3 files (e.g. chlor_a)
         flags -- flags to pass to l2bin seadas command
         spatial_res -- spatial resolution for binning (1: 1.1km, 4: 4.3km )
@@ -99,15 +101,18 @@ def process(filenames: Sequence[Path], product: str, flags: str, spatial_res: in
         spatial_bounds -- list of boundary latitudes and longitudes in order of east, west, north, south
     """
     l2bin_output = Path(filenames[0]).parent / "l2bin"
-    l3bin_output = Path("l3bin")
+    l3bin_output = Path("l3bin") / "daily" / sensor / str(year)
 
     daily_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: Path(a).name[5:8])]
 
     for day_files in daily_files:
         l2bin(day_files, l2bin_output, product, flags, spatial_res)
+
+        # First 14 characters of l2 files contain all identifying info about sensor, date ,and scan
         file_list = write_file_list(l2bin_output, [Path(f"{f.name[:14]}.bl2bin") for f in day_files])
 
-        l3bin_output_file = (l3bin_output / "daily" / sensor / str(year) / day_files[0].name[:8]).with_suffix(".nc")
+        # First 8 characters of l2 files include info about sensor and date
+        l3bin_output_file = (l3bin_output / f"{day_files[0].name[:8]}_{product}.nc")
         l3bin(file_list, l3bin_output_file, product, spatial_bounds)
 
     for file in l2bin_output.glob("*.bl2bin"):
