@@ -1,5 +1,6 @@
 import numpy as np
 from itertools import groupby
+import datetime
 import subprocess
 from pathlib import Path
 from typing import Sequence, Union
@@ -100,6 +101,7 @@ def process(filenames: Sequence[Path], product: str, flags: str, spatial_res: in
         year -- the year the files are from
         spatial_bounds -- list of boundary latitudes and longitudes in order of east, west, north, south
     """
+
     l2bin_output = Path(filenames[0]).parent / "l2bin"
     l3bin_output = Path("l3bin") / "daily" / sensor / str(year)
 
@@ -119,6 +121,21 @@ def process(filenames: Sequence[Path], product: str, flags: str, spatial_res: in
         os.remove(file)
 
     os.remove(l2bin_output / "l2b_list.txt")
+
+
+def get_month(yearmonth: str):
+    year = int(yearmonth[1:5])
+    yday = int(yearmonth[5:8])
+    date = datetime.datetime(year, 1, 1) + datetime.timedelta(yday - 1)
+    return date.month
+
+
+def year_process(filenames: Sequence[Path], product: str, flags: str, spatial_res: int, sensor: str,
+                 year: int, spatial_bounds: list):
+    yearly_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: Path(a).name)[1:5]]
+
+    for year_files in yearly_files:
+        process(year_files, product, flags, spatial_res, sensor, year, spatial_bounds)
 
 
 def batch_process():
