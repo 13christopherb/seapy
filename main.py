@@ -132,7 +132,7 @@ def get_month(yearmonth: str):
 
 def year_process(filenames: Sequence[Path], product: str, flags: str, spatial_res: int, sensor: str,
                  year: int, spatial_bounds: list):
-    yearly_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: Path(a).name)[1:5]]
+    yearly_files = [list(i) for _, i in groupby(np.sort(filenames), lambda a: Path(a).name[1:5])]
 
     for year_files in yearly_files:
         process(year_files, product, flags, spatial_res, sensor, year, spatial_bounds)
@@ -142,7 +142,8 @@ def batch_process():
     p = Path("requested_files/modis")
     filenames = list(p.glob("*.nc"))
     flags = os.popen("more $OCSSWROOT/share/modis/l2bin_defaults.par | grep  flaguse").read().split('=')[1]
-    process(filenames, "chlor_a", flags, 4, "modis", 2008, [-120, -180, 60, 20])
+    for year in range(2012, 2022):
+        year_process(filenames, "chlor_a", flags, 4, "modis", year, [-120, -180, 60, 30])
 
 
 batch_process()
